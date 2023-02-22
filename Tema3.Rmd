@@ -1,0 +1,360 @@
+---
+title: "Tema 3"
+subtitle: Tratamiento de Datos. Grado en Ciencia de Datos- UV
+author: "Marcelino Martínez"
+date:  "`r Sys.Date()`"  #Pondría la fecha del día actual
+ 
+params:
+  lang: ES
+lang: "`r switch(params$lang, ES = 'es-ES', EN = 'en-US')`"
+output:
+  html_document:
+    echo: yes
+    number_sections: yes
+    theme: lumen
+    toc: yes
+  html_notebook:
+    echo: yes
+    number_sections: yes
+    toc: yes
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+    number_sections: yes
+language:
+  label:
+    fig: 'Figura '
+    tab: 'Tabla '
+    eq: 'Ecuación '
+    thm: 'Teorema '
+    lem: 'Lema '
+    def: 'Definición '
+    cor: 'Corolario '
+    prp: 'Proposición '
+    exm: 'Ejemplo '
+    exr: 'Ejercicio '
+    proof: 'Demostración. '
+    remark: 'Nota: '
+    solution: 'Solución. '
+---
+
+
+```{r setup, cache = F, echo = F, message = F, warning = F, tidy = F}
+
+# CONFIGURACIÓN GENERAL
+library(knitr)
+options(width = 100)
+# Opciones generales chunks
+opts_chunk$set(echo=T,message = F, error = F, warning = F, comment = NA, fig.align = 'center', dpi = 100, tidy = F, cache.path = '.cache/', fig.path = './figure/')
+
+#options(xtable.type = 'html')
+knit_hooks$set(inline = function(x) {
+  
+  if(is.numeric(x)) {
+    round(x, getOption('digits'))
+  } else {
+    paste(as.character(x), collapse = ', ')
+  }
+})
+#knit_hooks$set(plot = knitr:::hook_plot_html)
+```
+```{r,echo=FALSE}
+# Especificamos las librerías necesarias en esta lista
+
+packages = c("MASS","knitr","tidyverse","car","tictoc","RSQLite")
+
+#use this function to check if each package is on the local machine
+#if a package is installed, it will be loaded
+#if any are not, the missing package(s) will be installed and loaded
+
+package.check <- lapply(packages, FUN = function(x) {
+  if (!require(x, character.only = TRUE)) {
+    install.packages(x, dependencies = TRUE,repos='http://cran.rediris.es')
+    library(x, character.only = TRUE)
+  }
+})
+
+#verify they are loaded
+search()
+
+```
+
+
+# Visualización de datos.
+Todos los ejemplos han sido extraídos del libro R in action de Rober Kabacoff. Capitulo 19
+
+## Ejemplo 1. 
+
+
+```{r, echo=T,eval=T}
+library(ggplot2)
+p<-ggplot(data=mtcars, aes(x=wt, y=mpg)) +
+   geom_point(pch=17, color="blue", size=2) +
+   geom_smooth(method="lm", color="red", linetype=2) +
+   labs(title="Automobile Data", x="Weight", y="Miles Per Gallon")
+show(p)
+```
+
+
+## Ejemplo 2. 
+
+```{r, echo=T,eval=T}
+# ?mtcars
+mtcars$am <- factor(mtcars$am, levels=c(0,1),
+                              labels=c("Automatic", "Manual"))
+mtcars$vs <- factor(mtcars$vs, levels=c(0,1),
+                        labels=c("V-Engine", "Straight Engine"))
+mtcars$cyl <- factor(mtcars$cyl)
+#Next, generate a plot using the following code:
+library(ggplot2)
+ggplot(data=mtcars, aes(x=hp, y=mpg,
+       shape=cyl, color=cyl)) +
+       geom_point(size=3) +
+       facet_grid(am~vs) +
+       labs(title="Automobile Data by Engine Type",
+            x="Horsepower", y="Miles Per Gallon")
+```
+
+## Ejemplo 3. Geoms
+ 
+```{r}
+data(singer, package="lattice")
+ggplot(singer, aes(x=height)) + geom_histogram()
+ggplot(singer, aes(x=voice.part, y=height)) + geom_boxplot()
+# Reordenación de un factor, según una función aplicado a una variable
+ggplot(singer, aes(x=reorder(voice.part,-height,mean), y=height)) + geom_boxplot()
+```
+
+## Ejemplo 4. Opciones GEOMS
+ 
+```{r}
+data(Salaries, package="car")
+library(ggplot2)
+ggplot(Salaries, aes(x=rank, y=salary)) +
+       geom_boxplot(fill="cornflowerblue",
+       color="black", notch=TRUE)+
+       geom_point(position="jitter", color="blue", alpha=.5)+
+       geom_rug(side="l", color='black')
+
+```
+
+## Ejemplo 5.Opciones GEOMS
+ 
+```{r}
+library(ggplot2)
+data(singer, package="lattice")
+ggplot(singer, aes(x=voice.part, y=height)) +
+       geom_violin(fill="lightblue") +
+       geom_boxplot(fill="lightgreen", width=.2)
+```
+
+## Ejemplo 6.Agrupamientos (Grouping)
+ 
+```{r}
+data(Salaries, package="car")
+        library(ggplot2)
+        ggplot(data=Salaries, aes(x=salary, fill=rank)) +
+               geom_density(alpha=.3)
+```
+
+## Ejemplo 7.Agrupamientos (Grouping)
+ 
+```{r}
+ggplot(Salaries, aes(x=yrs.since.phd, y=salary, color=rank,
+       shape=sex)) + geom_point()
+
+ggplot(Salaries, aes(x=yrs.since.phd, y=salary, color=rank,shape=sex)) + geom_point()+scale_shape_manual(values=c(19,7))+scale_color_manual(values=c('black','red','green'))
+```
+
+## Ejemplo 8.Agrupamientos (Grouping)
+ 
+```{r}
+ggplot(Salaries, aes(x=rank, fill=sex)) +
+       geom_bar(position="stack") + labs(title='position="stack"')
+ggplot(Salaries, aes(x=rank, fill=sex)) +
+       geom_bar(position="dodge") + labs(title='position="dodge"')+scale_fill_manual(values=c('black','yellow'))+scale_x_discrete(labels=c('Profesor\nAsistente','Profesor\nAsociado','Profesor'))
+ggplot(Salaries, aes(x=rank, fill=sex)) +
+       geom_bar(position="fill") + labs(title='position="fill"')
+```
+
+## Ejemplo 9.Agrupamientos (Grouping)
+ 
+```{r}
+ggplot(Salaries, aes(x=rank, fill=sex))+ geom_bar()
+        ggplot(Salaries, aes(x=rank)) + geom_bar(fill="red")
+        ggplot(Salaries, aes(x=rank, fill="red")) + geom_bar()
+```
+
+## Ejemplo 10. Facets
+ 
+```{r}
+data(singer, package="lattice")
+library(ggplot2)
+ggplot(data=singer, aes(x=height, fill=voice.part)) +
+       geom_density() +
+       facet_grid(voice.part~.)
+```
+
+## Ejemplo 11. Líneas de Ajuste, suavizado, (Smooth)
+ 
+```{r}
+data(Salaries, package="car")
+library(ggplot2)
+ggplot(data=Salaries, aes(x=yrs.since.phd, y=salary)) +
+       geom_smooth() + geom_point()
+```
+
+## Ejemplo 12.Líneas de Ajuste, suavizado, (Smooth)
+ 
+```{r}
+ggplot(data=Salaries, aes(x=yrs.since.phd, y=salary,
+                          linetype=sex, shape=sex, color=sex)) +
+       geom_smooth(method=lm, formula=y~poly(x,2),
+                   se=FALSE, size=1) +
+       geom_point(size=2)
+```
+
+## Ejemplo 13. Modificando la apariencia de un gráfico. Ejes
+ 
+```{r}
+data(Salaries,package="car")
+library(ggplot2)
+ggplot(data=Salaries, aes(x=rank, y=salary, fill=sex)) +
+geom_boxplot() +
+scale_x_discrete(breaks=c("AsstProf", "AssocProf", "Prof"),
+                        labels=c("Assistant\nProfessor",
+                                 "Associate\nProfessor",
+"Full\nProfessor")) + scale_y_continuous(breaks=c(50000, 100000, 150000, 200000),
+                          labels=c("$50K", "$100K", "$150K", "$200K")) +
+       labs(title="Faculty Salary by Rank and Sex", x="", y="")
+```
+
+## Ejemplo 14.Modificando la apariencia de un gráfico. Leyendas
+ 
+```{r}
+data(Salaries,package="car")
+library(ggplot2)
+ggplot(data=Salaries, aes(x=rank, y=salary, fill=sex)) +
+geom_boxplot() +
+scale_x_discrete(breaks=c("AsstProf", "AssocProf", "Prof"),
+                        labels=c("Assistant\nProfessor",
+                                 "Associate\nProfessor",
+"Full\nProfessor")) + scale_y_continuous(breaks=c(50000, 100000, 150000, 200000),
+                     labels=c("$50K", "$100K", "$150K", "$200K")) +
+       labs(title="Faculty Salary by Rank and Gender",
+            x="", y="", fill="Gender") +
+       theme(legend.position=c(.1,.8))
+```
+
+## Ejemplo 15.Modificando la apariencia de un gráfico. Escalas para variables continuas.
+ 
+```{r}
+ggplot(mtcars, aes(x=wt, y=mpg, size=disp)) +
+               geom_point(shape=21, color="black", fill="cornsilk") +
+                labs(x="Weight", y="Miles Per Gallon",
+                     title="Bubble Chart", size="Engine\nDisplacement")
+```
+
+## Ejemplo 16.Modificando la apariencia de un gráfico. Escalas para variables discretas. Manual
+ 
+```{r}
+data(Salaries, package="car")
+ggplot(data=Salaries, aes(x=yrs.since.phd, y=salary, color=rank)) +
+scale_color_manual(values=c("orange", "olivedrab", "navy")) + geom_point(size=2)
+```
+
+## Ejemplo 17.Modificando la apariencia de un gráfico. Escalas para variables discretas. Automática
+ 
+```{r}
+ggplot(data=Salaries, aes(x=yrs.since.phd, y=salary, color=rank)) +
+       scale_color_brewer(palette="Set1") + geom_point(size=2)
+```
+
+## Ejemplo 18.Escalas de colores.
+ 
+```{r, fig.height=5}
+library(RColorBrewer)
+display.brewer.all()
+```
+
+## Ejemplo 19.Themes. Personalización de las opciones de un gráfico.
+Nota: cambiar package **car**-->**carData** ya que los conjuntos de datos se almacenan en una librería distinta
+```{r}
+data(Salaries, package="carData")
+        library(ggplot2)
+        mytheme <- theme(plot.title=element_text(face="bold.italic",
+                         size="14", color="brown"),
+                         axis.title=element_text(face="bold.italic",
+                            size=10, color="brown"),
+                         axis.text=element_text(face="bold", size=9,
+                            color="darkblue"),
+                         panel.background=element_rect(fill="white",
+                            color="darkblue"),
+                         panel.grid.major.y=element_line(color="grey",
+                            linetype=1),
+                         panel.grid.minor.y=element_line(color="grey",
+                            linetype=2),
+                         panel.grid.minor.x=element_blank(),
+                         legend.position="top")
+        ggplot(Salaries, aes(x=rank, y=salary, fill=sex)) +
+               geom_boxplot() +
+               labs(title="Salary by Rank and Sex", x="Rank", y="Salary") +
+               mytheme
+```
+
+## Ejemplo 20. Multiple graphs per page
+
+```{r}
+ data(Salaries, package="carData")
+        library(ggplot2)
+        p1 <- ggplot(data=Salaries, aes(x=rank)) + geom_bar()
+        p2 <- ggplot(data=Salaries, aes(x=sex)) + geom_bar()
+        p3 <- ggplot(data=Salaries, aes(x=yrs.since.phd, y=salary)) + geom_point()
+        library(gridExtra)
+        grid.arrange(p1, p2, p3, ncol=3)
+        grid.arrange(p1, p2, p3, nrow=3)
+        grid.arrange(p1, p2, p3, nrow=2, ncol=2)
+```
+
+## Ejemplo 21. Saving graphs
+
+```{r}
+ myplot <- ggplot(data=mtcars, aes(x=mpg)) + geom_histogram()
+ggsave(file="mygraph.png", plot=myplot, width=5, height=4)
+```
+
+## Ejemplo 22. Interactive graph
+
+```{r}
+library(plotly)
+data(Salaries, package="carData")
+        library(ggplot2)
+        mytheme <- theme(plot.title=element_text(face="bold.italic",
+                         size="14", color="brown"),
+                         axis.title=element_text(face="bold.italic",
+                            size=10, color="brown"),
+                         axis.text=element_text(face="bold", size=9,
+                            color="darkblue"),
+                         panel.background=element_rect(fill="white",
+                            color="darkblue"),
+                         panel.grid.major.y=element_line(color="grey",
+                            linetype=1),
+                         panel.grid.minor.y=element_line(color="grey",
+                            linetype=2),
+                         panel.grid.minor.x=element_blank(),
+                         legend.position="top")
+        p<-ggplot(Salaries, aes(x=rank, y=salary, fill=sex)) +
+               geom_boxplot() +
+               labs(title="Salary by Rank and Sex", x="Rank", y="Salary") +
+               mytheme
+        
+        ggplotly(p)
+        
+        
+        q<-ggplot(mtcars, aes(x=wt, y=mpg, size=disp)) +
+               geom_point(shape=21, color="black", fill="cornsilk") +
+                labs(x="Weight", y="Miles Per Gallon",
+                     title="Bubble Chart", size="Engine\nDisplacement")
+        ggplotly(q)
+        
+```
